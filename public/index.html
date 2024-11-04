@@ -1,0 +1,172 @@
+import React, { useState } from 'react';
+import { Helmet } from 'react-helmet';
+import './styles.css';
+
+const Home = () => {
+  const [recommendations, setRecommendations] = useState([]);
+  const [bestTime, setBestTime] = useState('');
+  const [monthlyReport, setMonthlyReport] = useState('');
+  const [month, setMonth] = useState('');
+  const [year, setYear] = useState('');
+
+  // جلب التوصيات الذكية
+  const fetchAIRecommendations = async () => {
+    try {
+      const response = await fetch('/api/recommendations');
+      const data = await response.json();
+      if (data.recommendations && data.recommendations.length > 0) {
+        setRecommendations(data.recommendations);
+      } else {
+        setRecommendations(['لا توجد توصيات متاحة في الوقت الحالي.']);
+      }
+    } catch (error) {
+      console.error('فشل في جلب التوصيات:', error);
+    }
+  };
+
+  // جلب أفضل وقت للنشر
+  const fetchBestTime = async () => {
+    try {
+      const response = await fetch('/api/best-time');
+      const data = await response.json();
+      setBestTime(data.bestTime || 'لا توجد معلومات عن أفضل وقت للنشر.');
+    } catch (error) {
+      console.error('فشل في جلب أفضل وقت:', error);
+    }
+  };
+
+  // جلب التقرير الشهري
+  const fetchMonthlyReport = async () => {
+    try {
+      const response = await fetch(`/api/monthly-report?month=${month}&year=${year}`);
+      const reportData = await response.json();
+      setMonthlyReport(JSON.stringify(reportData) || 'فشل في جلب التقرير الشهري.');
+    } catch (error) {
+      console.error('فشل في جلب التقرير الشهري:', error);
+      setMonthlyReport('فشل في جلب التقرير الشهري.');
+    }
+  };
+
+  // جدولة منشور جديد
+  const handleScheduleSubmit = async (e) => {
+    e.preventDefault(); // منع إعادة تحميل الصفحة
+    const content = document.getElementById('content').value;
+    const platform = document.getElementById('platform').value;
+    const scheduledDate = document.getElementById('scheduledDate').value;
+
+    try {
+      const response = await fetch('/api/schedule-post', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ content, platform, scheduledDate }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        alert('تم جدولة المنشور بنجاح!');
+      } else {
+        alert('فشل في جدولة المنشور.');
+      }
+    } catch (error) {
+      console.error('فشل في جدولة المنشور:', error);
+    }
+  };
+
+  return (
+    <>
+      <Helmet>
+        <meta charset="UTF-8" />
+        <title>لوحة التحكم</title>
+      </Helmet>
+      <h1>لوحة تحكم المسؤول</h1>
+
+      {/* عرض الأنشطة */}
+      <section id="activities">
+        <h2>سجل الأنشطة</h2>
+        <ul id="activity-list"></ul>
+      </section>
+
+      {/* إدارة المستخدمين */}
+      <section id="user-management">
+        <h2>إدارة المستخدمين</h2>
+        <div id="user-list"></div>
+      </section>
+
+      {/* جدولة منشور جديد */}
+      <section id="schedule-post">
+        <h2>جدولة منشور جديد</h2>
+        <form id="schedule-form" onSubmit={handleScheduleSubmit}>
+          <label htmlFor="content">المحتوى:</label>
+          <textarea id="content" required></textarea>
+
+          <label htmlFor="platform">المنصة:</label>
+          <select id="platform" required>
+            <option value="facebook">فيسبوك</option>
+            <option value="twitter">تويتر</option>
+            {/* أضف المزيد من المنصات إذا لزم الأمر */}
+          </select>
+
+          <label htmlFor="scheduledDate">وقت الجدولة:</label>
+          <input type="datetime-local" id="scheduledDate" required />
+
+          <button type="submit">جدولة المنشور</button>
+        </form>
+      </section>
+
+      {/* تحليل أداء المنشورات */}
+      <section id="post-performance">
+        <h2>تحليل أداء المنشورات</h2>
+        <ul id="performance-list"></ul>
+      </section>
+
+      {/* أفضل وقت للنشر */}
+      <section id="best-time">
+        <h2>أفضل وقت للنشر</h2>
+        <button onClick={fetchBestTime}>احصل على أفضل وقت للنشر</button>
+        <p>{bestTime}</p>
+      </section>
+
+      {/* تقرير شهري */}
+      <section id="monthly-report">
+        <h2>تقرير شهري</h2>
+        <label htmlFor="report-month">اختر الشهر:</label>
+        <input 
+          type="number" 
+          id="report-month" 
+          min="1" 
+          max="12" 
+          value={month}
+          onChange={(e) => setMonth(e.target.value)} 
+        />
+
+        <label htmlFor="report-year">اختر السنة:</label>
+        <input 
+          type="number" 
+          id="report-year" 
+          min="2000" 
+          max="2100" 
+          value={year}
+          onChange={(e) => setYear(e.target.value)} 
+        />
+
+        <button onClick={fetchMonthlyReport}>عرض التقرير</button>
+        <div>{monthlyReport}</div>
+      </section>
+
+      {/* التحليلات والتوصيات الذكية */}
+      <section id="ai-analytics">
+        <h2>التحليلات والتوصيات الذكية</h2>
+        <button onClick={fetchAIRecommendations}>احصل على التوصيات</button>
+        <div>
+          {recommendations.map((rec, index) => (
+            <p key={index}>{rec}</p>
+          ))}
+        </div>
+      </section>
+    </>
+  );
+};
+
+export default Home;
